@@ -1,0 +1,55 @@
+name: Build Fortran Python Extension on Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies (f90wrap + numpy)
+        run: |
+          python -m pip install --upgrade pip
+          pip install f90wrap numpy
+
+      - name: Install MinGW and gfortran
+        shell: pwsh
+        run: |
+          choco install -y mingw
+          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
+          echo "C:\tools\mingw64\bin" >> $env:GITHUB_PATH
+
+      - name: Build Fortran extension
+        working-directory: src
+        run: |
+          make
+
+      - name: List build output
+        run: |
+          dir src
+
+      - name: Upload built extension (.pyd/.dll)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mori_gqme-windows
+          path: |
+            src\*.pyd
+            src\*.dll
+            src\*.so
+            src\mori_gqme.py
+
