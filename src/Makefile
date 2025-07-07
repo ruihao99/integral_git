@@ -1,50 +1,60 @@
 #=======================================================================
-#                   define the compiler names
+#                   Compiler and Toolchain
 #=======================================================================
 
 CC          = gcc
 F90         = gfortran
 PYTHON      = python
+F90WRAP     = f90wrap
+F2PY        = f2py-f90wrap
+
+#=======================================================================
+#                   Platform-dependent settings
+#=======================================================================
+
 UNAME_S     := $(shell uname -s)
 EXT         = so
-
 ifeq ($(OS),Windows_NT)
     EXT     = pyd
 endif
 
-CFLAGS      = -fPIC
-F90FLAGS    = -fPIC -O2
+#=======================================================================
+#                   Project-specific variables
+#=======================================================================
+
 PY_MOD      = mori_gqme
 F90_SRC     = mod_mori_gqme.f90
 OBJ         = $(F90_SRC:.f90=.o)
 F90WRAP_SRC = $(addprefix f90wrap_,${F90_SRC})
 WRAPFLAGS   = -v --type-check --kind-map kind_map
 F2PYFLAGS   = --build-dir build
-F90WRAP     = f90wrap
-F2PY        = f2py-f90wrap
+TARGET      = _${PY_MOD}.${EXT}
 
-TARGET      = _${PY_MOD}.$(EXT)
+#=======================================================================
+#                   Build rules
+#=======================================================================
 
-.PHONY: all clean
+.PHONY: all clean f2py test
 
 all: test
 
+# Clean all generated files
 clean:
 	rm -rf *.mod *.smod *.o f90wrap_*.f90 ${PY_MOD}.py _${PY_MOD}.* __pycache__/ .f2py_f2cmap build ${PY_MOD}/
 
-# main.o: ${F90_SRC}
-# 	${F90} ${F90FLAGS} -c $< -o $@
-
+# Compile Fortran source
 %.o: %.f90
-	${F90} ${F90FLAGS} -c $< -o $@
+	$(F90) -c -fPIC -O2 $< -o $@
 
+# Generate f90wrap file from Fortran module
 ${F90WRAP_SRC}: ${OBJ}
-	${F90WRAP} -m ${PY_MOD} ${WRAPFLAGS} ${F90_SRC}
+	$(F90WRAP) -m ${PY_MOD} ${WRAPFLAGS} ${F90_SRC}
 
-$(TARGET): ${F90WRAP_SRC}
-	CFLAGS="${CFLAGS}" ${F2PY} -c -m _${PY_MOD} ${F2PYFLAGS} f90wrap_*.f90 *.o
+# Build Python extension using f2py and gfortran
+f2py: ${F90WRAP_SRC} ${OBJ}
+	CFLAGS="-fPIC" $(F2PY) -c -m _${PY_MOD} ${F2PYFLAGS} f90wrap_*.f90 ${OBJ}
 
-f2py: $(TARGET)
-
+# Run the test script after building the extension
 test: f2py
-	${PYTHON} test.py
+	$(PYTHON) test.py
+
