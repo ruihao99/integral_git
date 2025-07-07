@@ -32,8 +32,8 @@ all: test
 clean:
 	rm -rf *.mod *.smod *.o f90wrap_*.f90 ${PY_MOD}.py _${PY_MOD}.* __pycache__/ .f2py_f2cmap build ${PY_MOD}/
 
-main.o: ${F90_SRC}
-	${F90} ${F90FLAGS} -c $< -o $@
+# main.o: ${F90_SRC}
+# 	${F90} ${F90FLAGS} -c $< -o $@
 
 %.o: %.f90
 	${F90} ${F90FLAGS} -c $< -o $@
