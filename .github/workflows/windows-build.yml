@@ -37,7 +37,7 @@ jobs:
       - name: Build Fortran extension
         working-directory: src
         run: |
-          make
+          run: make -C src
 
       - name: List build output
         run: |
